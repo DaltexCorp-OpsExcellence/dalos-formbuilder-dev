@@ -423,7 +423,7 @@ select.in{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xml
     <div class="foot">
       <button class="wsbtn" onclick="goWorkspace()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Workspace</button>
       <div class="usr"><div class="av" id="usrAv">—</div><div style="min-width:0"><div class="nm" id="usrNm">Signed in</div><div class="em" id="usrEm"></div></div></div>
-      <div class="ver">dalos-formbuilder-dev · phase 2</div>
+      <div class="ver">dalos-formbuilder-dev · phase 3</div>
     </div>
   </aside>
 
@@ -1066,6 +1066,7 @@ function addOpt(){ if(ro()) return; var f=findField(S.selId).f, n=f.options.leng
 
 /* ───────── PHASE 2 · campaigns → pinned version ───────── */
 var TESTFORM_HOST="https://daloshq.com/daltex-lead-form-test/";
+var TESTSM_HOST="https://daloshq.com/dalos-showmode-test/";
 var CAMP={rows:[],asg:{}};
 function renderCampaigns(){
   show("campaigns");
@@ -1077,36 +1078,41 @@ function renderCampaigns(){
   ]).then(function(r){
     if(r[0].error){ toast("Couldn’t load campaigns: "+r[0].error.message,true); return; }
     CAMP.rows=r[0].data||[]; CAMP.asg={};
-    (r[1].data||[]).forEach(function(a){ if(a.surface==="public") CAMP.asg[a.campaign_id]=a.template_id; });
+    (r[1].data||[]).forEach(function(a){ (CAMP.asg[a.campaign_id]=CAMP.asg[a.campaign_id]||{})[a.surface]=a.template_id; });
     drawCampaigns();
   });
 }
+function verOptions(surface,cur){
+  return S.rows.filter(function(r){return r.surface===surface && r.status!=="draft";})
+    .sort(function(a,b){ return a.name===b.name ? b.version-a.version : a.name.localeCompare(b.name); })
+    .map(function(r){ return '<option value="'+r.id+'"'+(cur===r.id?' selected':'')+'>'+esc(r.name)+' · v'+r.version+(r.status==="published"?' (live)':' (archived)')+'</option>'; }).join('');
+}
 function drawCampaigns(){
-  var pubVers=S.rows.filter(function(r){return r.surface==="public" && r.status!=="draft";})
-    .sort(function(a,b){ return a.name===b.name ? b.version-a.version : a.name.localeCompare(b.name); });
-  var h='<div class="vh"><h1>Campaigns</h1><span class="sub">Pin a published form version to a campaign, then open its <b>test form</b>. Test entries go to Test submissions — never to the real lead inbox.</span></div>';
-  if(!pubVers.length) h+='<div class="infobar">No published public-form versions yet — publish one under Form templates first.</div>';
-  h+='<div style="overflow-x:auto;margin-top:14px"><table class="ctable"><thead><tr><th>Campaign</th><th>Public form version (test)</th><th>Test form</th><th>Show Mode</th></tr></thead><tbody>';
+  var anyPub=S.rows.some(function(r){return r.surface==="public"&&r.status!=="draft";}), anySm=S.rows.some(function(r){return r.surface==="showmode"&&r.status!=="draft";});
+  var h='<div class="vh"><h1>Campaigns</h1><span class="sub">Pin a published version per campaign, then open the <b>test form</b> or <b>test Show Mode</b>. Test entries go to Test submissions — never to the real lead inbox.</span></div>';
+  if(!anyPub||!anySm) h+='<div class="infobar">Publish a '+(!anyPub?'Public form':'')+(!anyPub&&!anySm?' and a ':'')+(!anySm?'Show Mode':'')+' version under Form templates to pin it here.</div>';
+  h+='<div style="overflow-x:auto;margin-top:14px"><table class="ctable"><thead><tr><th>Campaign</th><th>Public form (test)</th><th>Show Mode (test)</th></tr></thead><tbody>';
   CAMP.rows.forEach(function(c){
-    var cur=CAMP.asg[c.id]||"";
-    var dates=(c.start_date||"")+(c.end_date?" → "+c.end_date:"");
-    var sel='<select class="in" '+(S.canEdit?'':'disabled ')+'onchange="assignPublic(\''+c.id+'\',this.value)"><option value="">— not assigned —</option>'+
-      pubVers.map(function(r){ return '<option value="'+r.id+'"'+(cur===r.id?' selected':'')+'>'+esc(r.name)+' · v'+r.version+(r.status==="published"?' (live)':' (archived)')+'</option>'; }).join('')+'</select>';
-    var link=cur?'<a class="btn btn-sm" href="'+TESTFORM_HOST+'?c='+encodeURIComponent(c.public_token||"")+'" target="_blank" rel="noopener">Open test form ↗</a>':'<span class="muted">assign a version first</span>';
+    var a=CAMP.asg[c.id]||{}, dates=(c.start_date||"")+(c.end_date?" → "+c.end_date:"");
+    var slot=function(surface,cur,href,label){
+      return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select class="in" '+(S.canEdit?'':'disabled ')+'onchange="assignSlot(\''+c.id+'\',\''+surface+'\',this.value)"><option value="">— not assigned —</option>'+verOptions(surface,cur)+'</select>'+
+        (cur?'<a class="btn btn-sm" href="'+href+'" target="_blank" rel="noopener">'+label+' ↗</a>':'')+'</div>'; };
     h+='<tr><td><div class="cn"><span class="act-dot'+(c.active?'':' off')+'"></span>'+esc(c.name)+'</div><div class="cl">'+esc(dates)+(c.location?' · '+esc(c.location):'')+'</div></td>'+
-      '<td>'+sel+'</td><td>'+link+'</td><td class="muted">Phase 3</td></tr>';
+      '<td>'+slot("public",a.public||"",TESTFORM_HOST+'?c='+encodeURIComponent(c.public_token||""),"Test form")+'</td>'+
+      '<td>'+slot("showmode",a.showmode||"",TESTSM_HOST+'?c='+encodeURIComponent(c.id),"Test Show Mode")+'</td></tr>';
   });
-  if(!CAMP.rows.length) h+='<tr><td colspan="4" class="muted">No campaigns visible to your role.</td></tr>';
-  h+='</tbody></table></div><div class="infobar" style="margin-top:14px">Assignments live in a separate test table — the real campaign QR links and the live public form are not affected.</div>';
+  if(!CAMP.rows.length) h+='<tr><td colspan="3" class="muted">No campaigns visible to your role.</td></tr>';
+  h+='</tbody></table></div><div class="infobar" style="margin-top:14px">Pins live in a separate test table — real campaign QR links, the live public form and the real Show Mode are not affected.</div>';
   $("#view-campaigns").innerHTML=h;
 }
-function assignPublic(campaignId,templateId){
+function assignSlot(campaignId,surface,templateId){
   var q=templateId
-    ? supabase.from("crm_form_assignments").upsert({campaign_id:campaignId,surface:"public",template_id:templateId},{onConflict:"campaign_id,surface"})
-    : supabase.from("crm_form_assignments").delete().eq("campaign_id",campaignId).eq("surface","public");
+    ? supabase.from("crm_form_assignments").upsert({campaign_id:campaignId,surface:surface,template_id:templateId},{onConflict:"campaign_id,surface"})
+    : supabase.from("crm_form_assignments").delete().eq("campaign_id",campaignId).eq("surface",surface);
   q.then(function(r){
     if(r.error){ toast("Couldn’t save: "+r.error.message,true); drawCampaigns(); return; }
-    if(templateId) CAMP.asg[campaignId]=templateId; else delete CAMP.asg[campaignId];
+    CAMP.asg[campaignId]=CAMP.asg[campaignId]||{};
+    if(templateId) CAMP.asg[campaignId][surface]=templateId; else delete CAMP.asg[campaignId][surface];
     var t=S.rows.filter(function(x){return x.id===templateId;})[0];
     toast(templateId?("Pinned "+(t?t.name+" v"+t.version:"version")):"Unassigned"); drawCampaigns();
   });
@@ -1133,7 +1139,9 @@ function drawSubs(){
     h+='<div class="sub"><div class="sub-h" onclick="toggleSub(\''+s.id+'\')">'+
       '<span class="co">'+esc(m.company_name||m.email||"(no company)")+'</span>'+
       (m.email&&m.company_name?'<span class="muted">'+esc(m.email)+'</span>':'')+
+      '<span class="sbadge '+(s.surface==="showmode"?'showmode':'public')+'" style="margin-left:0">'+(s.surface==="showmode"?'Show Mode':'Public form')+'</span>'+
       '<span class="verpill">'+esc(s.template_name||"")+' · v'+(s.template_version||"?")+'</span>'+
+      (s.captured_by_name?'<span class="muted">by '+esc(s.captured_by_name)+'</span>':'')+
       '<span class="langb">'+(s.form_language==="ar"?"عربي":"EN")+'</span>'+
       '<span class="muted">'+esc(s.campaign_name||"")+'</span><span class="spacer" style="flex:1"></span>'+
       '<span class="when">'+new Date(s.created_at).toLocaleString()+'</span><span style="color:var(--text3)">'+(open?'▾':'▸')+'</span></div>';
