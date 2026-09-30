@@ -381,6 +381,7 @@ select.in{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xml
 .usr .em{font-size:10.5px;color:var(--sidebar-muted);word-break:break-all}
 
 [hidden]{display:none!important}
+.protobadge{top:auto!important;bottom:12px;left:auto;right:14px;pointer-events:none;opacity:.85}
 
 </style>
 <!-- pinned to match every other DalOS app (shared-session auth invariant) -->
@@ -1008,7 +1009,7 @@ function renderInspector(){
     if(f.locked) h+='<input class="in" value="'+esc(f.target)+' (column)" disabled style="opacity:.75">';
     else {
       h+='<select class="in" onchange="setTarget(this.value)"'+dis+'>'+TARGETS.map(function(t){ return '<option value="'+t[0]+'"'+(f.target===t[0]?" selected":"")+'>'+t[1]+(t[0]==="__raw"?"":"  ·  "+t[0])+'</option>'; }).join('')+'</select>';
-      if(f.target==="__raw") h+='<input class="in" style="margin-top:7px;font-family:var(--font-mono);font-size:12px" placeholder="storage key, e.g. warehouse_size" value="'+esc(f.rawkey)+'" oninput="upd(\'rawkey\',this.value.trim())"'+dis+'><div style="font-size:11px;color:var(--text3);margin-top:5px">Lands in <span style="font-family:var(--font-mono)">raw_payload.'+esc(f.rawkey||"…")+'</span> — no database change needed.</div>';
+      if(f.target==="__raw") h+='<input class="in" style="margin-top:7px;font-family:var(--font-mono);font-size:12px" placeholder="storage key, e.g. warehouse_size" value="'+esc(f.rawkey)+'" oninput="upd(\'rawkey\',this.value.trim())"'+dis+'><div style="font-size:11px;color:var(--text3);margin-top:5px">Lands in <span id="rawHelp" style="font-family:var(--font-mono)">raw_payload.'+esc(f.rawkey||"…")+'</span> — no database change needed.</div>';
     }
     h+='</div>';
   }
@@ -1023,7 +1024,7 @@ function upd(path,val){
   if(path.indexOf(".")>0){ var p=path.split("."); f[p[0]][p[1]]=val; } else f[path]=val;
   markDirty(); delete S.errs[f.id];
   if(path==="label.en"){ var el=document.querySelector('.fld[data-id="'+f.id+'"] .lbl'); if(el) el.innerHTML=esc(f.label.en||TYPES[f.type].n)+(f.required?'<span class="req">*</span>':''); return; }
-  if(path==="rawkey"){ var c=document.querySelector('.fld[data-id="'+f.id+'"] .chip.raw'); if(c) c.textContent="raw · "+(f.rawkey||"—"); return; }
+  if(path==="rawkey"){ var c=document.querySelector('.fld[data-id="'+f.id+'"] .chip.raw'); if(c) c.textContent="raw · "+(f.rawkey||"—"); var rh=$("#rawHelp"); if(rh) rh.textContent="raw_payload."+(f.rawkey||"…"); return; }
   if(["required","tile","repOnly","source","ocrMode"].indexOf(path)>=0){ renderCanvas(); renderInspector(); }
 }
 function setTarget(v){ if(ro()) return; var f=findField(S.selId).f; f.target=v; if(v==="__raw" && !f.rawkey) f.rawkey=uniqueKey(f.label.en,f.id); if(v!=="card_image_path") f.ocr=false; markDirty(); delete S.errs[f.id]; renderCanvas(); renderInspector(); }
