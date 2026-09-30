@@ -382,6 +382,24 @@ select.in{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xml
 
 [hidden]{display:none!important}
 .protobadge{top:auto!important;bottom:12px;left:auto;right:14px;pointer-events:none;opacity:.85}
+/* phase 2 screens */
+.ctable select.in{min-width:220px}
+.ctable .muted{color:var(--text3);font-size:11.5px}
+.act-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:5px}
+.act-dot.off{background:var(--border2)}
+.sub{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:10px;overflow:hidden}
+.sub-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 14px;cursor:pointer}
+.sub-h:hover{background:var(--bg2)}
+.sub-h .co{font-weight:600;font-size:13.5px}
+.sub-h .when{font-family:var(--font-mono);font-size:11px;color:var(--text3)}
+.sub-b{border-top:1px solid var(--border);padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.sub-b h4{margin:0 0 6px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.sub-b h4.raw{color:var(--amber)}
+.kv{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12.5px}
+.kv .k{flex:0 0 42%;font-family:var(--font-mono);font-size:11.5px;color:var(--text3);word-break:break-all}
+.kv .v{flex:1;word-break:break-word}
+.langb{font-size:10px;font-family:var(--font-mono);border-radius:5px;padding:2px 7px;background:var(--bg3);color:var(--text2)}
+@media (max-width:760px){.sub-b{grid-template-columns:1fr}}
 
 </style>
 <!-- pinned to match every other DalOS app (shared-session auth invariant) -->
@@ -394,7 +412,9 @@ select.in{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xml
     <div class="brand"><div class="logo">D</div><b>Form Builder</b><span class="env">Staging · test</span></div>
     <div class="navgrp">
       <div class="h">Lead Generation</div>
-      <a class="nav-item on" onclick="location.hash='#templates'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Form templates</a>
+      <a class="nav-item" data-nav="templates" onclick="location.hash='#templates'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Form templates</a>
+      <a class="nav-item" data-nav="campaigns" onclick="location.hash='#campaigns'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>Campaigns</a>
+      <a class="nav-item" data-nav="subs" onclick="location.hash='#subs'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4h16v12H5.5L4 17.5z"/><path d="M8 9h8M8 12h5"/></svg>Test submissions</a>
     </div>
     <div class="navgrp">
       <div class="h">About this build</div>
@@ -403,7 +423,7 @@ select.in{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xml
     <div class="foot">
       <button class="wsbtn" onclick="goWorkspace()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Workspace</button>
       <div class="usr"><div class="av" id="usrAv">—</div><div style="min-width:0"><div class="nm" id="usrNm">Signed in</div><div class="em" id="usrEm"></div></div></div>
-      <div class="ver">dalos-formbuilder-dev · phase 1</div>
+      <div class="ver">dalos-formbuilder-dev · phase 2</div>
     </div>
   </aside>
 
@@ -411,6 +431,8 @@ select.in{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xml
     <div id="view-loading" class="loading">Loading…</div>
     <div id="view-auth" hidden></div>
     <div id="view-templates" class="view-pad" hidden></div>
+    <div id="view-campaigns" class="view-pad" hidden></div>
+    <div id="view-subs" class="view-pad" hidden></div>
     <div id="view-builder" hidden>
       <div class="top">
         <button class="menub" onclick="document.getElementById('side').classList.toggle('open')" aria-label="Menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
@@ -539,7 +561,9 @@ var toastT;
 function toast(m,bad){ $("#toastMsg").textContent=m; var t=$("#toast"); t.querySelector(".dot").style.background=bad?"#ff8f8f":"#8affc0"; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(function(){t.classList.remove("show");},bad?4200:2400); }
 function closeModal(id){ $("#"+id).classList.remove("show"); }
 function openModal(id){ $("#"+id).classList.add("show"); }
-function show(view){ ["loading","auth","templates","builder"].forEach(function(v){ $("#view-"+v).hidden=(v!==view); }); }
+function show(view){ ["loading","auth","templates","campaigns","subs","builder"].forEach(function(v){ $("#view-"+v).hidden=(v!==view); });
+  var nav=(view==="builder")?"templates":view; document.querySelectorAll(".nav-item[data-nav]").forEach(function(a){ a.classList.toggle("on",a.dataset.nav===nav); });
+  var sd=document.getElementById("side"); if(sd) sd.classList.remove("open"); }
 function relTime(ts){ if(!ts) return ""; var s=(Date.now()-new Date(ts).getTime())/1000; if(s<60) return "just now"; if(s<3600) return Math.floor(s/60)+"m ago"; if(s<86400) return Math.floor(s/3600)+"h ago"; return Math.floor(s/86400)+"d ago"; }
 
 /* ───────── catalog ───────── */
@@ -683,7 +707,10 @@ function loadRows(){
 function route(){
   var h=location.hash||"";
   var m=h.match(/^#t\/([0-9a-f-]{36})$/i);
-  if(m) openEditor(m[1]); else { S.cur=null; renderTemplates(); }
+  if(m) openEditor(m[1]);
+  else if(h==="#campaigns"){ S.cur=null; renderCampaigns(); }
+  else if(h==="#subs"){ S.cur=null; renderSubs(); }
+  else { S.cur=null; renderTemplates(); }
 }
 /* one guard for every in-app navigation (sidebar, version chips, Back): hash changes
    don't fire beforeunload, so bounce back to the draft and ask first */
@@ -1036,6 +1063,89 @@ function toggleSpec(i){ if(ro()) return; var f=findField(S.selId).f, o=f.options
   markDirty(); renderInspector(); }
 function rmOpt(i){ if(ro()) return; var f=findField(S.selId).f; f.options.splice(i,1); markDirty(); renderInspector(); }
 function addOpt(){ if(ro()) return; var f=findField(S.selId).f, n=f.options.length+1; f.options.push(opt("Option "+n,"Option "+n,"",f.type==="produce"?"•":"")); markDirty(); renderInspector(); }
+
+/* ───────── PHASE 2 · campaigns → pinned version ───────── */
+var TESTFORM_HOST="https://daloshq.com/daltex-lead-form-test/";
+var CAMP={rows:[],asg:{}};
+function renderCampaigns(){
+  show("campaigns");
+  $("#view-campaigns").innerHTML='<div class="vh"><h1>Campaigns</h1><span class="sub">Pin a published form version to a campaign, then open its <b>test form</b>. Test entries go to Test submissions — never to the real lead inbox.</span></div><div class="loading">Loading campaigns…</div>';
+  Promise.all([
+    supabase.from("crm_campaigns").select("id,name,public_token,active,start_date,end_date,location").order("start_date",{ascending:false}),
+    supabase.from("crm_form_assignments").select("campaign_id,surface,template_id,assigned_at"),
+    loadRows()
+  ]).then(function(r){
+    if(r[0].error){ toast("Couldn’t load campaigns: "+r[0].error.message,true); return; }
+    CAMP.rows=r[0].data||[]; CAMP.asg={};
+    (r[1].data||[]).forEach(function(a){ if(a.surface==="public") CAMP.asg[a.campaign_id]=a.template_id; });
+    drawCampaigns();
+  });
+}
+function drawCampaigns(){
+  var pubVers=S.rows.filter(function(r){return r.surface==="public" && r.status!=="draft";})
+    .sort(function(a,b){ return a.name===b.name ? b.version-a.version : a.name.localeCompare(b.name); });
+  var h='<div class="vh"><h1>Campaigns</h1><span class="sub">Pin a published form version to a campaign, then open its <b>test form</b>. Test entries go to Test submissions — never to the real lead inbox.</span></div>';
+  if(!pubVers.length) h+='<div class="infobar">No published public-form versions yet — publish one under Form templates first.</div>';
+  h+='<div style="overflow-x:auto;margin-top:14px"><table class="ctable"><thead><tr><th>Campaign</th><th>Public form version (test)</th><th>Test form</th><th>Show Mode</th></tr></thead><tbody>';
+  CAMP.rows.forEach(function(c){
+    var cur=CAMP.asg[c.id]||"";
+    var dates=(c.start_date||"")+(c.end_date?" → "+c.end_date:"");
+    var sel='<select class="in" '+(S.canEdit?'':'disabled ')+'onchange="assignPublic(\''+c.id+'\',this.value)"><option value="">— not assigned —</option>'+
+      pubVers.map(function(r){ return '<option value="'+r.id+'"'+(cur===r.id?' selected':'')+'>'+esc(r.name)+' · v'+r.version+(r.status==="published"?' (live)':' (archived)')+'</option>'; }).join('')+'</select>';
+    var link=cur?'<a class="btn btn-sm" href="'+TESTFORM_HOST+'?c='+encodeURIComponent(c.public_token||"")+'" target="_blank" rel="noopener">Open test form ↗</a>':'<span class="muted">assign a version first</span>';
+    h+='<tr><td><div class="cn"><span class="act-dot'+(c.active?'':' off')+'"></span>'+esc(c.name)+'</div><div class="cl">'+esc(dates)+(c.location?' · '+esc(c.location):'')+'</div></td>'+
+      '<td>'+sel+'</td><td>'+link+'</td><td class="muted">Phase 3</td></tr>';
+  });
+  if(!CAMP.rows.length) h+='<tr><td colspan="4" class="muted">No campaigns visible to your role.</td></tr>';
+  h+='</tbody></table></div><div class="infobar" style="margin-top:14px">Assignments live in a separate test table — the real campaign QR links and the live public form are not affected.</div>';
+  $("#view-campaigns").innerHTML=h;
+}
+function assignPublic(campaignId,templateId){
+  var q=templateId
+    ? supabase.from("crm_form_assignments").upsert({campaign_id:campaignId,surface:"public",template_id:templateId},{onConflict:"campaign_id,surface"})
+    : supabase.from("crm_form_assignments").delete().eq("campaign_id",campaignId).eq("surface","public");
+  q.then(function(r){
+    if(r.error){ toast("Couldn’t save: "+r.error.message,true); drawCampaigns(); return; }
+    if(templateId) CAMP.asg[campaignId]=templateId; else delete CAMP.asg[campaignId];
+    var t=S.rows.filter(function(x){return x.id===templateId;})[0];
+    toast(templateId?("Pinned "+(t?t.name+" v"+t.version:"version")):"Unassigned"); drawCampaigns();
+  });
+}
+
+/* ───────── PHASE 2 · test submissions ───────── */
+var SUBS={rows:[],open:{}};
+function renderSubs(){
+  show("subs");
+  $("#view-subs").innerHTML='<div class="vh"><h1>Test submissions</h1></div><div class="loading">Loading…</div>';
+  supabase.from("crm_form_test_submissions").select("*").order("created_at",{ascending:false}).limit(200).then(function(r){
+    if(r.error){ toast("Couldn’t load: "+r.error.message,true); SUBS.rows=[]; } else SUBS.rows=r.data||[];
+    drawSubs();
+  });
+}
+function kvList(o){ var ks=Object.keys(o||{}); if(!ks.length) return '<div class="muted" style="font-size:12px">—</div>';
+  return ks.map(function(k){ var v=o[k]; if(Array.isArray(v)) v=v.join(", "); else if(typeof v==="boolean") v=v?"true":"false"; else if(v&&typeof v==="object") v=JSON.stringify(v);
+    return '<div class="kv"><span class="k">'+esc(k)+'</span><span class="v">'+esc(v)+'</span></div>'; }).join(''); }
+function drawSubs(){
+  var h='<div class="vh"><h1>Test submissions</h1><span class="sub">What the template-driven test form captured — split exactly as it <b>would</b> be stored in a real lead: mapped columns vs <span style="font-family:var(--font-mono)">raw_payload</span>.</span><span class="spacer"></span><button class="btn" onclick="renderSubs()">↻ Refresh</button></div>';
+  if(!SUBS.rows.length) h+='<div class="tc-empty" style="margin-top:14px">No test submissions yet. Assign a version under <b>Campaigns</b>, open the test form and submit it.</div>';
+  SUBS.rows.forEach(function(s){
+    var m=s.mapped||{}, open=!!SUBS.open[s.id];
+    h+='<div class="sub"><div class="sub-h" onclick="toggleSub(\''+s.id+'\')">'+
+      '<span class="co">'+esc(m.company_name||m.email||"(no company)")+'</span>'+
+      (m.email&&m.company_name?'<span class="muted">'+esc(m.email)+'</span>':'')+
+      '<span class="verpill">'+esc(s.template_name||"")+' · v'+(s.template_version||"?")+'</span>'+
+      '<span class="langb">'+(s.form_language==="ar"?"عربي":"EN")+'</span>'+
+      '<span class="muted">'+esc(s.campaign_name||"")+'</span><span class="spacer" style="flex:1"></span>'+
+      '<span class="when">'+new Date(s.created_at).toLocaleString()+'</span><span style="color:var(--text3)">'+(open?'▾':'▸')+'</span></div>';
+    if(open) h+='<div class="sub-b"><div><h4>→ crm_leads columns</h4>'+kvList(m)+'</div><div><h4 class="raw">→ raw_payload</h4>'+kvList(s.raw_payload)+'</div>'+
+      (S.canEdit?'<div style="grid-column:1/-1;text-align:right"><button class="btn btn-sm" style="color:var(--red)" onclick="delSub(\''+s.id+'\')">Delete this test entry</button></div>':'')+'</div>';
+    h+='</div>';
+  });
+  $("#view-subs").innerHTML=h;
+}
+function toggleSub(id){ SUBS.open[id]=!SUBS.open[id]; drawSubs(); }
+function delSub(id){ confirmBox("Delete test entry?","This removes the test submission only.",function(){
+  supabase.from("crm_form_test_submissions").delete().eq("id",id).then(function(r){ if(r.error){ toast(r.error.message,true); return; } SUBS.rows=SUBS.rows.filter(function(x){return x.id!==id;}); drawSubs(); toast("Deleted"); }); },"Delete"); }
 
 /* ───────── capture behavior ───────── */
 function openBehavior(){
