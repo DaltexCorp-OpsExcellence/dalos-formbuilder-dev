@@ -423,7 +423,7 @@ select.in{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xml
     <div class="foot">
       <button class="wsbtn" onclick="goWorkspace()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Workspace</button>
       <div class="usr"><div class="av" id="usrAv">—</div><div style="min-width:0"><div class="nm" id="usrNm">Signed in</div><div class="em" id="usrEm"></div></div></div>
-      <div class="ver">dalos-formbuilder-dev · phase 3</div>
+      <div class="ver">dalos-formbuilder-dev · phase 4</div>
     </div>
   </aside>
 
@@ -1119,7 +1119,7 @@ function assignSlot(campaignId,surface,templateId){
 }
 
 /* ───────── PHASE 2 · test submissions ───────── */
-var SUBS={rows:[],open:{}};
+var SUBS={rows:[],open:{},scans:{}};
 function renderSubs(){
   show("subs");
   $("#view-subs").innerHTML='<div class="vh"><h1>Test submissions</h1></div><div class="loading">Loading…</div>';
@@ -1145,13 +1145,21 @@ function drawSubs(){
       '<span class="langb">'+(s.form_language==="ar"?"عربي":"EN")+'</span>'+
       '<span class="muted">'+esc(s.campaign_name||"")+'</span><span class="spacer" style="flex:1"></span>'+
       '<span class="when">'+new Date(s.created_at).toLocaleString()+'</span><span style="color:var(--text3)">'+(open?'▾':'▸')+'</span></div>';
-    if(open) h+='<div class="sub-b"><div><h4>→ crm_leads columns</h4>'+kvList(m)+'</div><div><h4 class="raw">→ raw_payload</h4>'+kvList(s.raw_payload)+'</div>'+
+    if(open) h+='<div class="sub-b"><div><h4>→ crm_leads columns</h4>'+kvList(m)+'</div><div><h4 class="raw">→ raw_payload</h4>'+kvList(s.raw_payload)+'</div>'+scanHtml(SUBS.scans[s.client_uuid])+
       (S.canEdit?'<div style="grid-column:1/-1;text-align:right"><button class="btn btn-sm" style="color:var(--red)" onclick="delSub(\''+s.id+'\')">Delete this test entry</button></div>':'')+'</div>';
     h+='</div>';
   });
   $("#view-subs").innerHTML=h;
 }
-function toggleSub(id){ SUBS.open[id]=!SUBS.open[id]; drawSubs(); }
+function toggleSub(id){ SUBS.open[id]=!SUBS.open[id]; drawSubs();
+  var s=SUBS.rows.filter(function(x){return x.id===id;})[0];
+  if(SUBS.open[id] && s && s.client_uuid && !SUBS.scans[s.client_uuid]){
+    supabase.from("crm_form_test_scans").select("kind,engine,ok,mode,read_fields,filled,error,ms,created_at").eq("client_uuid",s.client_uuid).order("created_at").then(function(r){ SUBS.scans[s.client_uuid]=r.data||[]; drawSubs(); }); } }
+function scanHtml(list){ if(!list||!list.length) return '';
+  return '<div style="grid-column:1/-1"><h4 style="color:var(--green)">→ scans ('+list.length+')</h4>'+list.map(function(sc){
+    var eng={cloud_vision:"AI card reader",device_ocr:"on-device OCR",vcard:"QR / vCard",link_extract:"QR link reader"}[sc.engine]||sc.engine;
+    return '<div class="kv" style="flex-wrap:wrap"><span class="k">'+esc(sc.kind)+' · '+esc(eng)+'</span><span class="v">'+(sc.ok?'✓ read':'✗ '+esc(sc.error||'nothing read'))+' · '+esc(sc.mode||'')+' · '+(sc.ms||0)+' ms</span>'+
+      '<div style="flex:0 0 100%;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px"><div><div class="muted" style="font-size:11px">read</div>'+kvList(sc.read_fields)+'</div><div><div class="muted" style="font-size:11px">filled into the form</div>'+kvList(sc.filled)+'</div></div></div>'; }).join('')+'</div>'; }
 function delSub(id){ confirmBox("Delete test entry?","This removes the test submission only.",function(){
   supabase.from("crm_form_test_submissions").delete().eq("id",id).then(function(r){ if(r.error){ toast(r.error.message,true); return; } SUBS.rows=SUBS.rows.filter(function(x){return x.id!==id;}); drawSubs(); toast("Deleted"); }); },"Delete"); }
 
